@@ -222,12 +222,12 @@
                 <div class="management-section">
                     <label>Kelola BOD</label>
                     <div id="bod-list-container" class="item-list"></div>
-                    <button type="button" class="btn-secondary" onclick="openModal('bod', 'add')">+ Tambah BOD Baru</button>
+                    <button type="button" class="btn-secondary" onclick="requestPassword(() => openModal('bod', 'add'))">+ Tambah BOD Baru</button>
                 </div>
                 <div class="management-section" style="margin-top: 40px;">
                     <label>Kelola Divisi</label>
                     <div id="division-list-container" class="item-list"></div>
-                    <button type="button" class="btn-secondary" onclick="openModal('division', 'add')">+ Tambah Divisi Baru</button>
+                    <button type="button" class="btn-secondary" onclick="requestPassword(() => openModal('division', 'add'))">+ Tambah Divisi Baru</button>
                 </div>
             </section>
         </div>
@@ -251,10 +251,27 @@
     </nav>
 
 
-    <!-- Modals (Tidak berubah) -->
+    <!-- Modals -->
     <div id="edit-modal" class="modal-overlay"><div class="modal-content"><h3 id="modal-title"></h3><div class="form-group"><label for="modal-input">Nama</label><input type="text" id="modal-input" placeholder="Masukkan nama..."></div><div class="modal-actions"><button type="button" class="btn-secondary" onclick="closeModal()">Batal</button><button type="button" class="btn-primary" id="modal-save-button">Simpan</button></div></div></div>
     <div id="confirm-modal" class="modal-overlay"><div class="modal-content"><h3>Konfirmasi Hapus</h3><p id="confirm-text">Apakah Anda yakin ingin menghapus item ini?</p><div class="modal-actions"><button type="button" class="btn-secondary" id="confirm-cancel">Batal</button><button type="button" class="btn-danger" id="confirm-delete">Hapus</button></div></div></div>
     <div id="report-detail-modal" class="modal-overlay"><div class="modal-content"><h3>Detail Laporan</h3><div id="report-detail-content"></div><div class="modal-actions"><button type="button" class="btn-secondary" onclick="closeReportDetailModal()">Tutup</button></div></div></div>
+    
+    <!-- Modal Password BARU -->
+    <div id="password-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Masukkan Password</h3>
+            <p>Anda memerlukan izin untuk melakukan aksi ini.</p>
+            <div class="form-group">
+                <label for="password-input">Password</label>
+                <input type="password" id="password-input" placeholder="*****">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" onclick="closePasswordModal()">Batal</button>
+                <button type="button" class="btn-primary" onclick="verifyPassword()">Verifikasi</button>
+            </div>
+        </div>
+    </div>
+    
     <div id="pdf-export-content"></div>
     <div id="notification"></div>
 
@@ -272,16 +289,60 @@
         document.getElementById(tabId).classList.add('active');
         const activeBtnId = `nav-${tabId.split('-')[0]}-btn`;
         document.getElementById(activeBtnId).classList.add('active');
-        window.scrollTo(0, 0); // Gulir ke atas saat ganti tab
+        window.scrollTo(0, 0); 
     }
-
 
     let internalActivityCount = 0, externalActivityCount = 0, communityServiceCount = 0;
     function addInternalActivity(){internalActivityCount++;const c=document.getElementById("internal-activities-container"),d=document.createElement("div");d.className="dynamic-item",d.id=`internal-activity-${internalActivityCount}`,d.innerHTML=`<div class=dynamic-item-header><strong>Kegiatan Internal ${internalActivityCount}</strong><button type=button class=btn-delete-item onclick=removeItem('internal-activity-${internalActivityCount}')>Hapus</button></div><div class=form-group><label>Uraian Kegiatan</label><input type=text name=internal_uraian_${internalActivityCount} placeholder="Contoh: Rapat koordinasi mingguan"></div><div class=form-group><label>Waktu</label><input type=time name=internal_waktu_${internalActivityCount}></div><div class=form-group><label>Tempat</label><input type=text name=internal_tempat_${internalActivityCount} placeholder="Contoh: Ruang Meeting Lt. 2"></div><div class=form-group><label>Hasil/Pencapaian</label><textarea name=internal_hasil_${internalActivityCount} placeholder="Jelaskan hasil dari kegiatan..."></textarea></div>`,c.appendChild(d)}function addExternalActivity(){externalActivityCount++;const c=document.getElementById("external-activities-container"),d=document.createElement("div");d.className="dynamic-item",d.id=`external-activity-${externalActivityCount}`,d.innerHTML=`<div class=dynamic-item-header><strong>Kegiatan Eksternal ${externalActivityCount}</strong><button type=button class=btn-delete-item onclick=removeItem('external-activity-${externalActivityCount}')>Hapus</button></div><div class=form-group><label>Uraian Kegiatan</label><input type=text name=external_uraian_${externalActivityCount} placeholder="Contoh: Pertemuan dengan mitra A"></div><div class=form-group><label>Waktu</label><input type=time name=external_waktu_${externalActivityCount}></div><div class=form-group><label>Tempat</label><input type=text name=external_tempat_${externalActivityCount} placeholder="Contoh: Kantor Mitra A"></div><div class=form-group><label>Pihak Terkait</label><input type=text name=external_pihak_${externalActivityCount} placeholder="Contoh: Bpk. Fulan"></div><div class=form-group><label>Hasil/Pencapaian</label><textarea name=external_hasil_${externalActivityCount} placeholder="Jelaskan hasil dari kegiatan..."></textarea></div>`,c.appendChild(d)}function addCommunityService(){communityServiceCount++;const c=document.getElementById("community-service-container"),d=document.createElement("div");d.className="dynamic-item",d.id=`service-${communityServiceCount}`,d.innerHTML=`<div class=dynamic-item-header><strong>Program ${communityServiceCount}</strong><button type=button class=btn-delete-item onclick=removeItem('service-${communityServiceCount}')>Hapus</button></div><div class=form-group><label>Nama Program</label><input type=text name=service_program_${communityServiceCount} placeholder="Contoh: Distribusi Sembako"></div><div class=form-group><label>Lokasi</label><input type=text name=service_lokasi_${communityServiceCount} placeholder="Contoh: Desa Sukamaju"></div><div class=form-group><label>Target Penerima</label><input type=text name=service_target_${communityServiceCount} placeholder="Contoh: 50 KK dhuafa"></div><div class=form-group><label>Status Pelaksanaan</label><input type=text name=service_status_${communityServiceCount} placeholder="Contoh: Selesai"></div><div class=form-group><label>Kendala</label><textarea name=service_kendala_${communityServiceCount} placeholder="Jelaskan jika ada kendala..."></textarea></div>`,c.appendChild(d)}function removeItem(c){const d=document.getElementById(c);d&&d.remove()}
 
     function showNotification(message, type) { const notification = document.getElementById('notification'); notification.textContent = message; notification.className = type; notification.classList.add('show'); setTimeout(() => { notification.classList.remove('show'); }, 3000); }
     
-    const modal=document.getElementById("edit-modal"),modalTitle=document.getElementById("modal-title"),modalInput=document.getElementById("modal-input"),modalSaveBtn=document.getElementById("modal-save-button"),confirmModal=document.getElementById("confirm-modal");function openModal(a,b,c=null,d=""){const e="bod"===a,f=`${"add"===b?"Tambah":"Edit"} ${e?"BOD Baru":"Divisi Baru"}`;modalTitle.textContent=f,modalInput.value=d,modal.classList.add("show"),modalInput.focus(),modalSaveBtn.onclick=()=>{const f=modalInput.value.trim();f?(e?"add"===b?addData("bod_members",f):updateData("bod_members",c,f):"add"===b?addData("divisions",f):updateData("divisions",c,f)):showNotification("Nama tidak boleh kosong.","error")}}function closeModal(){modal.classList.remove("show")}async function addData(a,b){const{error:c}=await supabaseClient.from(a).insert([{name:b}]);handleCrudResponse(c,"ditambahkan")}async function updateData(a,b,c){const{error:d}=await supabaseClient.from(a).update({name:c}).eq("id",b);handleCrudResponse(d,"diperbarui")}function confirmDelete(a,b){const c="bod"===a;confirmModal.classList.add("show"),document.getElementById("confirm-cancel").onclick=()=>confirmModal.classList.remove("show"),document.getElementById("confirm-delete").onclick=async()=>{const d=c?"bod_members":"divisions",{error:e}=await supabaseClient.from(d).delete().eq("id",b);handleCrudResponse(e,"dihapus"),confirmModal.classList.remove("show")}}function handleCrudResponse(a,b){a?showNotification(`Gagal ${b}: ${a.message}`,"error"):(showNotification(`Data berhasil ${b}!`,"success"),loadAllMasterData(),closeModal())}async function loadAndDisplayData(a){const b="bod"===a,c=b?"bod_members":"divisions",d=document.getElementById(b?"bod-list-container":"division-list-container"),e=document.getElementById(b?"reporter-name":"division"),f=document.getElementById(b?"filter-bod":"filter-division");const{data:g,error:h}=await supabaseClient.from(c).select("id, name").order("name");if(d.innerHTML="",e.innerHTML=`<option value="" disabled selected>Pilih ${b?"Nama BOD":"Divisi"}</option>`,f.innerHTML='<option value="">Semua</option>',h)return void console.error(`Error loading ${a}:`,h);g.forEach(a=>{const c=document.createElement("div");c.className="list-item",c.innerHTML=`<span>${a.name}</span> <div class="list-item-actions"><button type="button" class="btn-edit" onclick="openModal('${b?"bod":"division"}', 'edit', '${a.id}', '${a.name}')">Edit</button <button type="button" class="btn-delete" onclick="confirmDelete('${b?"bod":"division"}', '${a.id}')">Hapus</button></div>`,d.appendChild(c);const g=document.createElement("option");g.value=a.name,g.textContent=a.name,e.appendChild(g);const i=document.createElement("option");i.value=a.name,i.textContent=a.name,f.appendChild(i)})}function loadAllMasterData(){loadAndDisplayData("bod"),loadAndDisplayData("division")}
+    // --- LOGIKA PASSWORD & PENGELOLAAN DATA MASTER BARU ---
+    const editModal=document.getElementById("edit-modal"),modalTitle=document.getElementById("modal-title"),modalInput=document.getElementById("modal-input"),modalSaveBtn=document.getElementById("modal-save-button"),confirmModal=document.getElementById("confirm-modal"),passwordModal=document.getElementById("password-modal"),passwordInput=document.getElementById("password-input");
+    let pendingAction = null;
+
+    function requestPassword(actionCallback) {
+        pendingAction = actionCallback;
+        passwordModal.classList.add('show');
+        passwordInput.focus();
+    }
+    
+    function verifyPassword() {
+        const password = passwordInput.value;
+        if (password === "Awas") {
+            closePasswordModal();
+            if (pendingAction) {
+                pendingAction();
+                pendingAction = null;
+            }
+        } else {
+            showNotification("Password salah!", "error");
+        }
+    }
+    
+    function closePasswordModal() {
+        passwordInput.value = '';
+        passwordModal.classList.remove('show');
+    }
+
+    function openModal(a,b,c=null,d=""){const e="bod"===a,f=`${"add"===b?"Tambah":"Edit"} ${e?"BOD Baru":"Divisi Baru"}`;modalTitle.textContent=f,modalInput.value=d,editModal.classList.add("show"),modalInput.focus(),modalSaveBtn.onclick=()=>{const f=modalInput.value.trim();f?(e?"add"===b?addData("bod_members",f):updateData("bod_members",c,f):"add"===b?addData("divisions",f):updateData("divisions",c,f)):showNotification("Nama tidak boleh kosong.","error")}}function closeModal(){editModal.classList.remove("show")}async function addData(a,b){const{error:c}=await supabaseClient.from(a).insert([{name:b}]);handleCrudResponse(c,"ditambahkan")}async function updateData(a,b,c){const{error:d}=await supabaseClient.from(a).update({name:c}).eq("id",b);handleCrudResponse(d,"diperbarui")}function confirmDelete(a,b){const c="bod"===a;confirmModal.classList.add("show"),document.getElementById("confirm-cancel").onclick=()=>confirmModal.classList.remove("show"),document.getElementById("confirm-delete").onclick=async()=>{const d=c?"bod_members":"divisions",{error:e}=await supabaseClient.from(d).delete().eq("id",b);handleCrudResponse(e,"dihapus"),confirmModal.classList.remove("show")}}function handleCrudResponse(a,b){a?showNotification(`Gagal ${b}: ${a.message}`,"error"):(showNotification(`Data berhasil ${b}!`,"success"),loadAllMasterData(),closeModal())}
+    
+    async function loadAndDisplayData(a){
+        const b="bod"===a,c=b?"bod_members":"divisions",d=document.getElementById(b?"bod-list-container":"division-list-container"),e=document.getElementById(b?"reporter-name":"division"),f=document.getElementById(b?"filter-bod":"filter-division");
+        const{data:g,error:h}=await supabaseClient.from(c).select("id, name").order("name");
+        
+        d.innerHTML="",e.innerHTML=`<option value="" disabled selected>Pilih ${b?"Nama BOD":"Divisi"}</option>`,f.innerHTML='<option value="">Semua</option>';
+        if(h)return void console.error(`Error loading ${a}:`,h);
+        
+        g.forEach(g=>{
+            const h=document.createElement("div");h.className="list-item",
+            // PERBAIKAN: Menambahkan `>` yang hilang dan mengganti onclick ke `requestPassword`
+            h.innerHTML=`<span>${g.name}</span> <div class="list-item-actions"><button type="button" class="btn-edit" onclick="requestPassword(() => openModal('${b?"bod":"division"}', 'edit', '${g.id}', '${g.name}'))">Edit</button><button type="button" class="btn-delete" onclick="requestPassword(() => confirmDelete('${b?"bod":"division"}', '${g.id}'))">Hapus</button></div>`,
+            d.appendChild(h);const i=document.createElement("option");i.value=g.name,i.textContent=g.name,e.appendChild(i);const j=document.createElement("option");j.value=g.name,j.textContent=g.name,f.appendChild(j)
+        })
+    }
+    
+    function loadAllMasterData(){loadAndDisplayData("bod"),loadAndDisplayData("division")}
 
     const reportForm = document.getElementById('report-form');
     reportForm.addEventListener('submit', async function(event) {
@@ -289,44 +350,12 @@
         const submitButton = document.getElementById('submit-button'); submitButton.disabled = true; submitButton.textContent = 'Mengirim...';
         
         const formData = new FormData(reportForm);
-        
         const internalActivities = [];
-        for(let i=1; i<=internalActivityCount; i++) {
-            if(document.getElementById(`internal-activity-${i}`)){
-                internalActivities.push({
-                    uraian: formData.get(`internal_uraian_${i}`),
-                    waktu: formData.get(`internal_waktu_${i}`),
-                    tempat: formData.get(`internal_tempat_${i}`),
-                    hasil: formData.get(`internal_hasil_${i}`)
-                });
-            }
-        }
-        
+        for(let i=1; i<=internalActivityCount; i++) { if(document.getElementById(`internal-activity-${i}`)){ internalActivities.push({ uraian: formData.get(`internal_uraian_${i}`), waktu: formData.get(`internal_waktu_${i}`), tempat: formData.get(`internal_tempat_${i}`), hasil: formData.get(`internal_hasil_${i}`) }); } }
         const externalActivities = [];
-        for(let i=1; i<=externalActivityCount; i++) {
-            if(document.getElementById(`external-activity-${i}`)){
-                externalActivities.push({
-                    uraian: formData.get(`external_uraian_${i}`),
-                    waktu: formData.get(`external_waktu_${i}`),
-                    tempat: formData.get(`external_tempat_${i}`),
-                    pihak: formData.get(`external_pihak_${i}`),
-                    hasil: formData.get(`external_hasil_${i}`)
-                });
-            }
-        }
-
+        for(let i=1; i<=externalActivityCount; i++) { if(document.getElementById(`external-activity-${i}`)){ externalActivities.push({ uraian: formData.get(`external_uraian_${i}`), waktu: formData.get(`external_waktu_${i}`), tempat: formData.get(`external_tempat_${i}`), pihak: formData.get(`external_pihak_${i}`), hasil: formData.get(`external_hasil_${i}`) }); } }
         const communityServices = [];
-        for(let i=1; i<=communityServiceCount; i++) {
-            if(document.getElementById(`service-${i}`)){
-                communityServices.push({
-                    program: formData.get(`service_program_${i}`),
-                    lokasi: formData.get(`service_lokasi_${i}`),
-                    target: formData.get(`service_target_${i}`),
-                    status: formData.get(`service_status_${i}`),
-                    kendala: formData.get(`service_kendala_${i}`)
-                });
-            }
-        }
+        for(let i=1; i<=communityServiceCount; i++) { if(document.getElementById(`service-${i}`)){ communityServices.push({ program: formData.get(`service_program_${i}`), lokasi: formData.get(`service_lokasi_${i}`), target: formData.get(`service_target_${i}`), status: formData.get(`service_status_${i}`), kendala: formData.get(`service_kendala_${i}`) }); } }
         
         const submissionData = {
             reporter_name: formData.get("reporter-name"),
@@ -354,7 +383,7 @@
             document.getElementById('report-date').valueAsDate = new Date();
             addInternalActivity();
             applyFilters();
-            switchTab('reports-tab'); // Langsung pindah ke tab laporan setelah submit
+            switchTab('reports-tab');
         }
         submitButton.disabled = false; submitButton.textContent = 'Kirim Laporan Harian';
     });
@@ -404,14 +433,8 @@
             const item = document.createElement('div');
             item.className = 'report-item';
             item.onclick = () => showReportDetails(report.id);
-            
             const reportDate = new Date(report.report_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
-
-            item.innerHTML = `
-                <h4>${report.reporter_name}</h4>
-                <p><strong>Tanggal:</strong> ${reportDate}</p>
-                <p><strong>Divisi:</strong> ${report.division_name || 'N/A'}</p>
-            `;
+            item.innerHTML = `<h4>${report.reporter_name}</h4><p><strong>Tanggal:</strong> ${reportDate}</p><p><strong>Divisi:</strong> ${report.division_name || 'N/A'}</p>`;
             reportListContainer.appendChild(item);
         });
     }
@@ -434,31 +457,18 @@
         const report = displayedReports.find(r => r.id === reportId);
         if (!report) return;
 
-        let content = `
-            <h4>Informasi Umum</h4>
-            <p><strong>Tanggal:</strong> ${new Date(report.report_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
-            <p><strong>Pelapor:</strong> ${report.reporter_name}</p>
-            <p><strong>Divisi:</strong> ${report.division_name}</p>
-        `;
-
+        let content = `<h4>Informasi Umum</h4><p><strong>Tanggal:</strong> ${new Date(report.report_date).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'})}</p><p><strong>Pelapor:</strong> ${report.reporter_name}</p><p><strong>Divisi:</strong> ${report.division_name}</p>`;
         const internalActivities = safeJsonParse(report.internal_activities, 'internal_activities');
         const externalActivities = safeJsonParse(report.external_activities, 'external_activities');
         const communityServices = safeJsonParse(report.community_services, 'community_services');
-
-        const sections = [
-            { title: 'Kegiatan Internal', data: internalActivities },
-            { title: 'Kegiatan Eksternal', data: externalActivities },
-            { title: 'Pelayanan Masyarakat', data: communityServices }
-        ];
+        const sections = [{ title: 'Kegiatan Internal', data: internalActivities }, { title: 'Kegiatan Eksternal', data: externalActivities }, { title: 'Pelayanan Masyarakat', data: communityServices }];
 
         sections.forEach(section => {
             if (section.data && section.data.length > 0) {
                 content += `<h4>${section.title}</h4>`;
                 section.data.forEach((item, index) => {
                     content += `<div class="dynamic-item"><strong>${index + 1}.</strong><br>`;
-                    for (const [key, value] of Object.entries(item)) {
-                        if(value) content += `<strong>${key.charAt(0).toUpperCase() + key.slice(1)}:</strong> ${value.toString().replace(/\n/g, '<br>')}<br>`;
-                    }
+                    for (const [key, value] of Object.entries(item)) { if(value) content += `<strong>${key.charAt(0).toUpperCase() + key.slice(1)}:</strong> ${value.toString().replace(/\n/g, '<br>')}<br>`; }
                     content = content.slice(0, -4);
                     content += `</div>`;
                 });
@@ -478,10 +488,7 @@
 
     async function exportToPDF() {
         const currentlyDisplayedReports = displayedReports;
-        if (!currentlyDisplayedReports || currentlyDisplayedReports.length === 0) {
-            showNotification('Tidak ada data untuk diekspor.', 'error');
-            return;
-        }
+        if (!currentlyDisplayedReports || currentlyDisplayedReports.length === 0) { showNotification('Tidak ada data untuk diekspor.', 'error'); return; }
 
         showNotification('Mempersiapkan PDF...', 'success');
         const pdf = new jsPDF('p', 'mm', 'a4');
@@ -494,43 +501,17 @@
 
         for (let i = 0; i < currentlyDisplayedReports.length; i++) {
             const report = currentlyDisplayedReports[i];
-            
             const internalActivities = safeJsonParse(report.internal_activities, 'internal_activities_pdf');
             const externalActivities = safeJsonParse(report.external_activities, 'external_activities_pdf');
             const communityServices = safeJsonParse(report.community_services, 'community_services_pdf');
-            
             const reportDate = new Date(report.report_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
 
-            let html = `
-                <div id="pdf-render-area" style="font-family: 'Helvetica', 'Arial', sans-serif; font-size: 10px; padding: 10px; color: #333; width: ${contentWidth * 3.78}px; border: 1px solid #ccc; border-radius: 8px;">
-                    <style> h3,h4{color:#005a8d;margin-top:15px;margin-bottom:5px} h3{font-size:14px;border-bottom:1px solid #ccc;padding-bottom:5px} h4{font-size:12px;border-bottom:1px solid #eee;padding-bottom:3px} p{margin:2px 0 8px 0;line-height:1.4} strong{color:#000} .activity-item{margin-bottom:10px} </style>
-                    <h3>Laporan oleh ${report.reporter_name} - ${reportDate}</h3>
-                    <h4>Informasi Umum</h4>
-                    <p><strong>Divisi:</strong> ${report.division_name}</p>
-            `;
-            
-            const sections = [ 
-                { title: 'Kegiatan Internal', data: internalActivities }, 
-                { title: 'Kegiatan Eksternal', data: externalActivities }, 
-                { title: 'Pelayanan Masyarakat', data: communityServices } 
-            ];
-
-            sections.forEach(section => {
-                if (section.data && section.data.length > 0) {
-                    html += `<h4>${section.title}</h4>`;
-                    section.data.forEach((item, index) => {
-                        html += `<div class="activity-item"><p><strong>${index + 1}.</strong><br>`;
-                        for (const [key, value] of Object.entries(item)) { if(value) html += `<strong>${key.charAt(0).toUpperCase() + key.slice(1)}:</strong> ${value.toString().replace(/\n/g, '<br>')}<br>`; }
-                        html = html.slice(0, -4);
-                        html += `</p></div>`;
-                    });
-                }
-            });
-
+            let html = `<div id="pdf-render-area" style="font-family: 'Helvetica', 'Arial', sans-serif; font-size: 10px; padding: 10px; color: #333; width: ${contentWidth * 3.78}px; border: 1px solid #ccc; border-radius: 8px;"><style> h3,h4{color:#005a8d;margin-top:15px;margin-bottom:5px} h3{font-size:14px;border-bottom:1px solid #ccc;padding-bottom:5px} h4{font-size:12px;border-bottom:1px solid #eee;padding-bottom:3px} p{margin:2px 0 8px 0;line-height:1.4} strong{color:#000} .activity-item{margin-bottom:10px} </style><h3>Laporan oleh ${report.reporter_name} - ${reportDate}</h3><h4>Informasi Umum</h4><p><strong>Divisi:</strong> ${report.division_name}</p>`;
+            const sections = [ { title: 'Kegiatan Internal', data: internalActivities }, { title: 'Kegiatan Eksternal', data: externalActivities }, { title: 'Pelayanan Masyarakat', data: communityServices } ];
+            sections.forEach(section => { if (section.data && section.data.length > 0) { html += `<h4>${section.title}</h4>`; section.data.forEach((item, index) => { html += `<div class="activity-item"><p><strong>${index + 1}.</strong><br>`; for (const [key, value] of Object.entries(item)) { if(value) html += `<strong>${key.charAt(0).toUpperCase() + key.slice(1)}:</strong> ${value.toString().replace(/\n/g, '<br>')}<br>`; } html = html.slice(0, -4); html += `</p></div>`; }); } });
             if(report.next_day_plan) html += `<h4>Rencana Hari Berikutnya</h4><p>${report.next_day_plan.replace(/\n/g, '<br>')}</p>`;
             if(report.conclusion) html += `<h4>Kesimpulan</h4><p>${report.conclusion.replace(/\n/g, '<br>')}</p>`;
             html += `</div>`;
-            
             pdfContent.innerHTML = html;
 
             try {
@@ -538,15 +519,9 @@
                 const canvas = await html2canvas(elementToRender, { logging: false });
                 const imgData = canvas.toDataURL('image/jpeg', 0.95);
                 let imgHeight = (canvas.height * contentWidth) / canvas.width;
-
-                if (i > 0 && yPosition + imgHeight > pdf.internal.pageSize.getHeight() - margin) {
-                    pdf.addPage();
-                    yPosition = margin;
-                }
-
+                if (i > 0 && yPosition + imgHeight > pdf.internal.pageSize.getHeight() - margin) { pdf.addPage(); yPosition = margin; }
                 pdf.addImage(imgData, 'JPEG', margin, yPosition, contentWidth, imgHeight);
                 yPosition += imgHeight + 10;
-
             } catch (e) {
                 console.error("Gagal merender laporan ke kanvas:", e);
                 showNotification(`Gagal memproses laporan oleh ${report.reporter_name}.`, 'error');
