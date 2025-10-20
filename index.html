@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan Harian BOD</title>
+    
+    <!-- Impor Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Impor Library untuk Ekspor PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- Impor Font dari Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* CSS Reset & Pengaturan Global */
+        :root {
+            --primary-green: #008450;
+            --dark-blue: #005a8d;
+            --light-gray: #f4f7f6;
+            --text-dark: #222;
+            --text-light: #555;
+            --border-color: #e0e4e8;
+            --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--light-gray);
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+        .container { max-width: 800px; margin: 0 auto; padding: 15px; }
+
+        /* Header */
+        h1 { text-align: center; color: var(--text-dark); font-weight: 700; font-size: 1.6rem; margin-top: 20px; margin-bottom: 8px; }
+        .description { text-align: center; font-size: 0.95rem; color: var(--text-light); margin-bottom: 30px; max-width: 500px; margin-left: auto; margin-right: auto; }
+
+        /* Kartu (Card) */
+        .card { background: #ffffff; border-radius: 12px; padding: 25px; margin-bottom: 20px; box-shadow: var(--card-shadow); border: 1px solid var(--border-color); }
+        .card-header { display: flex; align-items: center; gap: 12px; font-size: 1.2rem; font-weight: 600; color: var(--dark-blue); border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 20px; }
+        .card-header span { font-size: 1.5rem; }
+        
+        /* Form */
+        .form-group { margin-bottom: 18px; }
+        .form-group label { display: block; font-weight: 500; margin-bottom: 8px; font-size: 0.9rem; color: #444; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 14px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; font-family: 'Inter', sans-serif; background-color: #fdfdfd; transition: border-color 0.2s, box-shadow 0.2s; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(0, 132, 80, 0.1); }
+        .form-group textarea { min-height: 120px; resize: vertical; }
+
+        /* Item Dinamis */
+        .dynamic-item { border: 1px solid var(--border-color); border-radius: 10px; padding: 15px; margin-top: 15px; position: relative; background-color: #f9f9f9; }
+        .dynamic-item-header { font-weight: 600; color: #333; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .btn-delete-item { background: #ffebee; color: #c62828; border: none; padding: 6px 10px; font-size: 0.8rem; font-weight: 500; border-radius: 6px; cursor: pointer; }
+
+        /* Tombol */
+        button { width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; -webkit-tap-highlight-color: transparent; }
+        .btn-primary { background-color: var(--primary-green); color: white; box-shadow: 0 2px 5px rgba(0, 132, 80, 0.3); }
+        .btn-primary:hover:not(:disabled) { background-color: #006a40; transform: translateY(-1px); }
+        .btn-primary:disabled { background-color: #a5d6a7; cursor: not-allowed; }
+        .btn-secondary { background-color: #e8f5e9; color: var(--primary-green); margin-top: 15px; }
+        .btn-secondary:hover { background-color: #dceddd; }
+        .btn-danger { background: #c62828; color: white; }
+
+        /* Notifikasi */
+        #notification { position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%); padding: 12px 25px; border-radius: 8px; color: white; z-index: 1000; transition: bottom 0.5s ease-in-out; }
+        #notification.show { bottom: 30px; }
+        #notification.success { background-color: #2e7d32; }
+        #notification.error { background-color: #c62828; }
+        
+        /* Fitur Pengelolaan Master */
+        .management-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; }
+        .management-section label { font-weight: 600; color: var(--text-dark); font-size: 1rem; }
+        .item-list { margin-top: 10px; }
+        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background-color: #f9f9f9; border-radius: 6px; margin-bottom: 8px; }
+        .list-item span { flex-grow: 1; }
+        .list-item-actions button { width: auto; padding: 5px 10px; font-size: 0.8rem; margin-left: 5px; }
+        .btn-edit { background-color: #e3f2fd; color: #1565c0; }
+        .btn-delete { background-color: #ffebee; color: #c62828; }
+
+        /* Modal */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 1001; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s; }
+        .modal-overlay.show { opacity: 1; visibility: visible; }
+        .modal-content { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; transform: scale(0.9); transition: transform 0.3s; }
+        .modal-overlay.show .modal-content { transform: scale(1); }
+        .modal-content h3 { margin-bottom: 20px; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+        
+        /* -- Fitur Laporan (CSS BARU) -- */
+        .filter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        @media (max-width: 600px) { .filter-grid { grid-template-columns: 1fr; } }
+        #report-list-container { margin-top: 20px; }
+        .report-item { background-color: #f9f9f9; border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; margin-bottom: 10px; cursor: pointer; transition: box-shadow 0.2s; }
+        .report-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .report-item h4 { margin-bottom: 5px; color: var(--primary-green); }
+        .report-item p { font-size: 0.9rem; color: #666; }
+        #loading-indicator { text-align: center; padding: 20px; color: var(--text-light); }
+        .report-actions { display: flex; gap: 10px; margin-top: 20px; }
+
+        /* Modal Detail Laporan */
+        #report-detail-modal .modal-content { max-width: 700px; max-height: 80vh; overflow-y: auto; }
+        #report-detail-content h4 { font-size: 1.1rem; color: var(--dark-blue); margin-top: 15px; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        #report-detail-content p { margin-bottom: 8px; font-size: 0.95rem; }
+        #report-detail-content strong { color: #333; }
+        
+        /* PERBAIKAN: Sembunyikan elemen PDF dengan memindahkannya ke luar layar */
+        #pdf-export-content {
+            position: absolute;
+            left: -9999px;
+            top: auto;
+            width: auto;
+            height: auto;
+            overflow: hidden;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Laporan Harian BOD</h1>
+        <p class="description">
+            Sistem pelaporan digital untuk dokumentasi kegiatan harian BOD LAZ & Wakaf Albahjah.
+        </p>
+
+        <form id="report-form">
+            <section class="card">
+                <div class="card-header"><span>🗓️</span><h3>Informasi Umum</h3></div>
+                <div class="form-group"><label for="report-date">Hari / Tanggal</label><input type="date" id="report-date" name="report-date" required></div>
+                <div class="form-group"><label for="reporter-name">Nama Pelapor (BOD)</label><select id="reporter-name" name="reporter-name" required><option value="" disabled selected>Memuat...</option></select></div>
+                <div class="management-section"><label>Kelola BOD</label><div id="bod-list-container" class="item-list"></div><button type="button" class="btn-secondary" onclick="openModal('bod', 'add')">+ Tambah BOD Baru</button></div>
+                <div class="form-group" style="margin-top: 25px;"><label for="division">Divisi</label><select id="division" name="division" required><option value="" disabled selected>Memuat...</option></select></div>
+                <div class="management-section"><label>Kelola Divisi</label><div id="division-list-container" class="item-list"></div><button type="button" class="btn-secondary" onclick="openModal('division', 'add')">+ Tambah Divisi Baru</button></div>
+            </section>
+            
+            <section class="card"><div class="card-header"><span>🏢</span><h3>I. Kegiatan Internal Organisasi</h3></div><div id="internal-activities-container"></div><button type="button" class="btn-secondary" onclick="addInternalActivity()">+ Tambah Kegiatan Internal</button></section>
+            <section class="card"><div class="card-header"><span>🤝</span><h3>II. Kegiatan Eksternal</h3></div><div id="external-activities-container"></div><button type="button" class="btn-secondary" onclick="addExternalActivity()">+ Tambah Kegiatan Eksternal</button></section>
+            <section class="card"><div class="card-header"><span>🌍</span><h3>III. Pelayanan Masyarakat</h3></div><div id="community-service-container"></div><button type="button" class="btn-secondary" onclick="addCommunityService()">+ Tambah Program</button></section>
+            <section class="card"><div class="card-header"><span>📝</span><h3>VII. Rencana Hari Berikutnya</h3></div><div class="form-group"><label for="next-day-plan">Agenda prioritas untuk esok hari</label><textarea id="next-day-plan" name="next-day-plan" placeholder="Tuliskan rencana kegiatan Anda..."></textarea></div></section>
+            <section class="card"><div class="card-header"><span>💡</span><h3>VIII. Kesimpulan & Catatan Khusus</h3></div><div class="form-group"><label for="conclusion">Ringkasan capaian dan perhatian penting hari ini</label><textarea id="conclusion" name="conclusion" placeholder="Tuliskan kesimpulan Anda..."></textarea></div></section>
+            
+            <button type="submit" id="submit-button" class="btn-primary">Kirim Laporan Harian</button>
+        </form>
+
+        <section class="card" style="margin-top: 40px;">
+            <div class="card-header">
+                <span>📊</span>
+                <h3>Daftar Laporan</h3>
+            </div>
+            
+            <div class="filters">
+                <div class="filter-grid">
+                    <div class="form-group"><label for="filter-start-date">Dari Tanggal</label><input type="date" id="filter-start-date"></div>
+                    <div class="form-group"><label for="filter-end-date">Sampai Tanggal</label><input type="date" id="filter-end-date"></div>
+                    <div class="form-group"><label for="filter-bod">Nama BOD</label><select id="filter-bod"><option value="">Semua</option></select></div>
+                    <div class="form-group"><label for="filter-division">Divisi</label><select id="filter-division"><option value="">Semua</option></select></div>
+                </div>
+                <div class="report-actions">
+                    <button type="button" class="btn-primary" onclick="applyFilters()" style="width: 70%;">Terapkan Filter</button>
+                    <button type="button" class="btn-secondary" onclick="exportToPDF()" style="width: 30%; margin-top: 0;">Ekspor PDF</button>
+                </div>
+            </div>
+
+            <div id="report-list-container">
+                <div id="loading-indicator">Memuat laporan...</div>
+            </div>
+        </section>
+    </div>
+
+    <div id="edit-modal" class="modal-overlay"><div class="modal-content"><h3 id="modal-title"></h3><div class="form-group"><label for="modal-input">Nama</label><input type="text" id="modal-input" placeholder="Masukkan nama..."></div><div class="modal-actions"><button type="button" class="btn-secondary" onclick="closeModal()">Batal</button><button type="button" class="btn-primary" id="modal-save-button">Simpan</button></div></div></div>
+    <div id="confirm-modal" class="modal-overlay"><div class="modal-content"><h3>Konfirmasi Hapus</h3><p id="confirm-text">Apakah Anda yakin ingin menghapus item ini?</p><div class="modal-actions"><button type="button" class="btn-secondary" id="confirm-cancel">Batal</button><button type="button" class="btn-danger" id="confirm-delete">Hapus</button></div></div></div>
+    
+    <div id="report-detail-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Detail Laporan</h3>
+            <div id="report-detail-content"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" onclick="closeReportDetailModal()">Tutup</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="pdf-export-content"></div>
+
+    <div id="notification"></div>
+
+<script>
+    const { jsPDF } = window.jspdf;
+    const SUPABASE_URL = 'https://kqrihsvimbivmqvrqhro.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtxcmloc3ZpbWJpdm1xdnJxaHJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDU0MjksImV4cCI6MjA3NjIyMTQyOX0.3s71tqjB0JQj6rDI-w03f-hNYTzbABqzSxB86QASnlo';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let internalActivityCount = 0, externalActivityCount = 0, communityServiceCount = 0;
+    function addInternalActivity(){internalActivityCount++;const c=document.getElementById("internal-activities-container"),d=document.createElement("div");d.className="dynamic-item",d.id=`internal-activity-${internalActivityCount}`,d.innerHTML=`<div class=dynamic-item-header><strong>Kegiatan Internal ${internalActivityCount}</strong><button type=button class=btn-delete-item onclick=removeItem('internal-activity-${internalActivityCount}')>Hapus</button></div><div class=form-group><label>Uraian Kegiatan</label><input type=text name=internal_uraian_${internalActivityCount} placeholder="Contoh: Rapat koordinasi mingguan"></div><div class=form-group><label>Waktu</label><input type=time name=internal_waktu_${internalActivityCount}></div><div class=form-group><label>Tempat</label><input type=text name=internal_tempat_${internalActivityCount} placeholder="Contoh: Ruang Meeting Lt. 2"></div><div class=form-group><label>Hasil/Pencapaian</label><textarea name=internal_hasil_${internalActivityCount} placeholder="Jelaskan hasil dari kegiatan..."></textarea></div>`,c.appendChild(d)}function addExternalActivity(){externalActivityCount++;const c=document.getElementById("external-activities-container"),d=document.createElement("div");d.className="dynamic-item",d.id=`external-activity-${externalActivityCount}`,d.innerHTML=`<div class=dynamic-item-header><strong>Kegiatan Eksternal ${externalActivityCount}</strong><button type=button class=btn-delete-item onclick=removeItem('external-activity-${externalActivityCount}')>Hapus</button></div><div class=form-group><label>Uraian Kegiatan</label><input type=text name=external_uraian_${externalActivityCount} placeholder="Contoh: Pertemuan dengan mitra A"></div><div class=form-group><label>Waktu</label><input type=time name=external_waktu_${externalActivityCount}></div><div class=form-group><label>Tempat</label><input type=text name=external_tempat_${externalActivityCount} placeholder="Contoh: Kantor Mitra A"></div><div class=form-group><label>Pihak Terkait</label><input type=text name=external_pihak_${externalActivityCount} placeholder="Contoh: Bpk. Fulan"></div><div class=form-group><label>Hasil/Pencapaian</label><textarea name=external_hasil_${externalActivityCount} placeholder="Jelaskan hasil dari kegiatan..."></textarea></div>`,c.appendChild(d)}function addCommunityService(){communityServiceCount++;const c=document.getElementById("community-service-container"),d=document.createElement("div");d.className="dynamic-item",d.id=`service-${communityServiceCount}`,d.innerHTML=`<div class=dynamic-item-header><strong>Program ${communityServiceCount}</strong><button type=button class=btn-delete-item onclick=removeItem('service-${communityServiceCount}')>Hapus</button></div><div class=form-group><label>Nama Program</label><input type=text name=service_program_${communityServiceCount} placeholder="Contoh: Distribusi Sembako"></div><div class=form-group><label>Lokasi</label><input type=text name=service_lokasi_${communityServiceCount} placeholder="Contoh: Desa Sukamaju"></div><div class=form-group><label>Target Penerima</label><input type=text name=service_target_${communityServiceCount} placeholder="Contoh: 50 KK dhuafa"></div><div class=form-group><label>Status Pelaksanaan</label><input type=text name=service_status_${communityServiceCount} placeholder="Contoh: Selesai"></div><div class=form-group><label>Kendala</label><textarea name=service_kendala_${communityServiceCount} placeholder="Jelaskan jika ada kendala..."></textarea></div>`,c.appendChild(d)}function removeItem(c){const d=document.getElementById(c);d&&d.remove()}
+
+    function showNotification(message, type) { const notification = document.getElementById('notification'); notification.textContent = message; notification.className = type; notification.classList.add('show'); setTimeout(() => { notification.classList.remove('show'); }, 3000); }
+    
+    const modal=document.getElementById("edit-modal"),modalTitle=document.getElementById("modal-title"),modalInput=document.getElementById("modal-input"),modalSaveBtn=document.getElementById("modal-save-button"),confirmModal=document.getElementById("confirm-modal");function openModal(a,b,c=null,d=""){const e="bod"===a,f=`${"add"===b?"Tambah":"Edit"} ${e?"BOD Baru":"Divisi Baru"}`;modalTitle.textContent=f,modalInput.value=d,modal.classList.add("show"),modalInput.focus(),modalSaveBtn.onclick=()=>{const f=modalInput.value.trim();f?(e?"add"===b?addData("bod_members",f):updateData("bod_members",c,f):"add"===b?addData("divisions",f):updateData("divisions",c,f)):showNotification("Nama tidak boleh kosong.","error")}}function closeModal(){modal.classList.remove("show")}async function addData(a,b){const{error:c}=await supabaseClient.from(a).insert([{name:b}]);handleCrudResponse(c,"ditambahkan")}async function updateData(a,b,c){const{error:d}=await supabaseClient.from(a).update({name:c}).eq("id",b);handleCrudResponse(d,"diperbarui")}function confirmDelete(a,b){const c="bod"===a;confirmModal.classList.add("show"),document.getElementById("confirm-cancel").onclick=()=>confirmModal.classList.remove("show"),document.getElementById("confirm-delete").onclick=async()=>{const d=c?"bod_members":"divisions",{error:e}=await supabaseClient.from(d).delete().eq("id",b);handleCrudResponse(e,"dihapus"),confirmModal.classList.remove("show")}}function handleCrudResponse(a,b){a?showNotification(`Gagal ${b}: ${a.message}`,"error"):(showNotification(`Data berhasil ${b}!`,"success"),loadAllMasterData(),closeModal())}async function loadAndDisplayData(a){const b="bod"===a,c=b?"bod_members":"divisions",d=document.getElementById(b?"bod-list-container":"division-list-container"),e=document.getElementById(b?"reporter-name":"division"),f=document.getElementById(b?"filter-bod":"filter-division");const{data:g,error:h}=await supabaseClient.from(c).select("id, name").order("name");if(d.innerHTML="",e.innerHTML=`<option value="" disabled selected>Pilih ${b?"Nama BOD":"Divisi"}</option>`,f.innerHTML='<option value="">Semua</option>',h)return void console.error(`Error loading ${a}:`,h);g.forEach(a=>{const c=document.createElement("div");c.className="list-item",c.innerHTML=`<span>${a.name}</span> <div class="list-item-actions"><button type="button" class="btn-edit" onclick="openModal('${b?"bod":"division"}', 'edit', '${a.id}', '${a.name}')">Edit</button <button type="button" class="btn-delete" onclick="confirmDelete('${b?"bod":"division"}', '${a.id}')">Hapus</button></div>`,d.appendChild(c);const g=document.createElement("option");g.value=a.name,g.textContent=a.name,e.appendChild(g);const h=document.createElement("option");h.value=a.name,h.textContent=a.name,f.appendChild(h)})}function loadAllMasterData(){loadAndDisplayData("bod"),loadAndDisplayData("division")}
+
+    const reportForm = document.getElementById('report-form');
+    reportForm.addEventListener('submit', async function(event) {
+        event.preventDefault();
+        const submitButton = document.getElementById('submit-button'); submitButton.disabled = true; submitButton.textContent = 'Mengirim...';
+        
+        const formData = new FormData(reportForm);
+        
+        const internalActivities = [];
+        for(let i=1; i<=internalActivityCount; i++) {
+            if(document.getElementById(`internal-activity-${i}`)){
+                internalActivities.push({
+                    uraian: formData.get(`internal_uraian_${i}`),
+                    waktu: formData.get(`internal_waktu_${i}`),
+                    tempat: formData.get(`internal_tempat_${i}`),
+                    hasil: formData.get(`internal_hasil_${i}`)
+                });
+            }
+        }
+        
+        const externalActivities = [];
+        for(let i=1; i<=externalActivityCount; i++) {
+            if(document.getElementById(`external-activity-${i}`)){
+                externalActivities.push({
+                    uraian: formData.get(`external_uraian_${i}`),
+                    waktu: formData.get(`external_waktu_${i}`),
+                    tempat: formData.get(`external_tempat_${i}`),
+                    pihak: formData.get(`external_pihak_${i}`),
+                    hasil: formData.get(`external_hasil_${i}`)
+                });
+            }
+        }
+
+        const communityServices = [];
+        for(let i=1; i<=communityServiceCount; i++) {
+            if(document.getElementById(`service-${i}`)){
+                communityServices.push({
+                    program: formData.get(`service_program_${i}`),
+                    lokasi: formData.get(`service_lokasi_${i}`),
+                    target: formData.get(`service_target_${i}`),
+                    status: formData.get(`service_status_${i}`),
+                    kendala: formData.get(`service_kendala_${i}`)
+                });
+            }
+        }
+        
+        const submissionData = {
+            reporter_name: formData.get("reporter-name"),
+            report_date: formData.get("report-date"),
+            division_name: formData.get("division"),
+            internal_activities: JSON.stringify(internalActivities),
+            external_activities: JSON.stringify(externalActivities),
+            community_services: JSON.stringify(communityServices),
+            next_day_plan: formData.get("next-day-plan"),
+            conclusion: formData.get("conclusion"),
+        };
+
+        const { error } = await supabaseClient.from('daily_reports').insert([submissionData]);
+
+        if (error) { 
+            showNotification('Gagal mengirim laporan. Cek konsol.', 'error'); 
+            console.error(error); 
+        } else {
+            showNotification('Laporan berhasil dikirim!', 'success');
+            reportForm.reset(); 
+            document.getElementById('internal-activities-container').innerHTML = ''; 
+            document.getElementById('external-activities-container').innerHTML = ''; 
+            document.getElementById('community-service-container').innerHTML = '';
+            internalActivityCount = 0; externalActivityCount = 0; communityServiceCount = 0;
+            document.getElementById('report-date').valueAsDate = new Date();
+            addInternalActivity();
+            applyFilters();
+        }
+        submitButton.disabled = false; submitButton.textContent = 'Kirim Laporan Harian';
+    });
+
+    const reportListContainer = document.getElementById('report-list-container');
+    const loadingIndicator = document.getElementById('loading-indicator');
+    let displayedReports = []; 
+
+    async function applyFilters() {
+        loadingIndicator.style.display = 'block';
+        reportListContainer.innerHTML = ''; 
+        
+        const filters = {
+            startDate: document.getElementById('filter-start-date').value,
+            endDate: document.getElementById('filter-end-date').value,
+            bodName: document.getElementById('filter-bod').value,
+            division: document.getElementById('filter-division').value,
+        };
+        
+        let query = supabaseClient.from('daily_reports').select('*').order('report_date', { ascending: false });
+
+        if (filters.startDate) query = query.gte('report_date', filters.startDate);
+        if (filters.endDate) query = query.lte('report_date', filters.endDate);
+        if (filters.bodName) query = query.eq('reporter_name', filters.bodName);
+        if (filters.division) query = query.eq('division_name', filters.division);
+
+        const { data, error } = await query;
+
+        loadingIndicator.style.display = 'none';
+        if (error) {
+            reportListContainer.innerHTML = `<p style="color: red;">Gagal memuat laporan: ${error.message}</p>`;
+            return;
+        }
+        
+        displayedReports = data; 
+        renderReports(displayedReports);
+    }
+
+    function renderReports(reports) {
+        reportListContainer.innerHTML = ''; 
+        if (!reports || reports.length === 0) {
+            reportListContainer.innerHTML = '<p>Tidak ada laporan yang ditemukan.</p>';
+            return;
+        }
+
+        reports.forEach(report => {
+            const item = document.createElement('div');
+            item.className = 'report-item';
+            item.onclick = () => showReportDetails(report.id);
+            
+            const reportDate = new Date(report.report_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+
+            item.innerHTML = `
+                <h4>${report.reporter_name}</h4>
+                <p><strong>Tanggal:</strong> ${reportDate}</p>
+                <p><strong>Divisi:</strong> ${report.division_name || 'N/A'}</p>
+            `;
+            reportListContainer.appendChild(item);
+        });
+    }
+
+    const reportDetailModal = document.getElementById('report-detail-modal');
+    const reportDetailContent = document.getElementById('report-detail-content');
+
+    function safeJsonParse(jsonString, fieldName = 'data') {
+        try {
+            if (!jsonString) return [];
+            const data = JSON.parse(jsonString);
+            return Array.isArray(data) ? data : [];
+        } catch (e) {
+            console.error(`Gagal mem-parsing JSON dari field '${fieldName}':`, jsonString, e);
+            return [];
+        }
+    }
+
+    function showReportDetails(reportId) {
+        const report = displayedReports.find(r => r.id === reportId);
+        if (!report) return;
+
+        let content = `
+            <h4>Informasi Umum</h4>
+            <p><strong>Tanggal:</strong> ${new Date(report.report_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+            <p><strong>Pelapor:</strong> ${report.reporter_name}</p>
+            <p><strong>Divisi:</strong> ${report.division_name}</p>
+        `;
+
+        const internalActivities = safeJsonParse(report.internal_activities, 'internal_activities');
+        const externalActivities = safeJsonParse(report.external_activities, 'external_activities');
+        const communityServices = safeJsonParse(report.community_services, 'community_services');
+
+        const sections = [
+            { title: 'Kegiatan Internal', data: internalActivities },
+            { title: 'Kegiatan Eksternal', data: externalActivities },
+            { title: 'Pelayanan Masyarakat', data: communityServices }
+        ];
+
+        sections.forEach(section => {
+            if (section.data && section.data.length > 0) {
+                content += `<h4>${section.title}</h4>`;
+                section.data.forEach((item, index) => {
+                    content += `<div class="dynamic-item"><strong>${index + 1}.</strong><br>`;
+                    for (const [key, value] of Object.entries(item)) {
+                        if(value) content += `<strong>${key.charAt(0).toUpperCase() + key.slice(1)}:</strong> ${value.toString().replace(/\n/g, '<br>')}<br>`;
+                    }
+                    content = content.slice(0, -4);
+                    content += `</div>`;
+                });
+            }
+        });
+
+        if(report.next_day_plan) content += `<h4>Rencana Hari Berikutnya</h4><p>${report.next_day_plan.replace(/\n/g, '<br>')}</p>`;
+        if(report.conclusion) content += `<h4>Kesimpulan</h4><p>${report.conclusion.replace(/\n/g, '<br>')}</p>`;
+
+        reportDetailContent.innerHTML = content;
+        reportDetailModal.classList.add('show');
+    }
+
+    function closeReportDetailModal() {
+        reportDetailModal.classList.remove('show');
+    }
+
+    async function exportToPDF() {
+        const currentlyDisplayedReports = displayedReports;
+        if (!currentlyDisplayedReports || currentlyDisplayedReports.length === 0) {
+            showNotification('Tidak ada data untuk diekspor.', 'error');
+            return;
+        }
+
+        showNotification('Mempersiapkan PDF...', 'success');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const margin = 15;
+        const contentWidth = pdfWidth - (margin * 2);
+        let yPosition = margin;
+
+        const pdfContent = document.getElementById('pdf-export-content');
+
+        for (let i = 0; i < currentlyDisplayedReports.length; i++) {
+            const report = currentlyDisplayedReports[i];
+            
+            const internalActivities = safeJsonParse(report.internal_activities, 'internal_activities_pdf');
+            const externalActivities = safeJsonParse(report.external_activities, 'external_activities_pdf');
+            const communityServices = safeJsonParse(report.community_services, 'community_services_pdf');
+            
+            const reportDate = new Date(report.report_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+
+            let html = `
+                <div id="pdf-render-area" style="font-family: 'Helvetica', 'Arial', sans-serif; font-size: 10px; padding: 10px; color: #333; width: ${contentWidth * 3.78}px; border: 1px solid #ccc; border-radius: 8px;">
+                    <style> h3,h4{color:#005a8d;margin-top:15px;margin-bottom:5px} h3{font-size:14px;border-bottom:1px solid #ccc;padding-bottom:5px} h4{font-size:12px;border-bottom:1px solid #eee;padding-bottom:3px} p{margin:2px 0 8px 0;line-height:1.4} strong{color:#000} .activity-item{margin-bottom:10px} </style>
+                    <h3>Laporan oleh ${report.reporter_name} - ${reportDate}</h3>
+                    <h4>Informasi Umum</h4>
+                    <p><strong>Divisi:</strong> ${report.division_name}</p>
+            `;
+            
+            const sections = [ 
+                { title: 'Kegiatan Internal', data: internalActivities }, 
+                { title: 'Kegiatan Eksternal', data: externalActivities }, 
+                { title: 'Pelayanan Masyarakat', data: communityServices } 
+            ];
+
+            sections.forEach(section => {
+                if (section.data && section.data.length > 0) {
+                    html += `<h4>${section.title}</h4>`;
+                    section.data.forEach((item, index) => {
+                        html += `<div class="activity-item"><p><strong>${index + 1}.</strong><br>`;
+                        for (const [key, value] of Object.entries(item)) { if(value) html += `<strong>${key.charAt(0).toUpperCase() + key.slice(1)}:</strong> ${value.toString().replace(/\n/g, '<br>')}<br>`; }
+                        html = html.slice(0, -4);
+                        html += `</p></div>`;
+                    });
+                }
+            });
+
+            if(report.next_day_plan) html += `<h4>Rencana Hari Berikutnya</h4><p>${report.next_day_plan.replace(/\n/g, '<br>')}</p>`;
+            if(report.conclusion) html += `<h4>Kesimpulan</h4><p>${report.conclusion.replace(/\n/g, '<br>')}</p>`;
+            html += `</div>`;
+            
+            pdfContent.innerHTML = html;
+
+            try {
+                const elementToRender = document.getElementById('pdf-render-area');
+                const canvas = await html2canvas(elementToRender, { logging: false });
+                const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                let imgHeight = (canvas.height * contentWidth) / canvas.width;
+
+                if (i > 0 && yPosition + imgHeight > pdf.internal.pageSize.getHeight() - margin) {
+                    pdf.addPage();
+                    yPosition = margin;
+                }
+
+                pdf.addImage(imgData, 'JPEG', margin, yPosition, contentWidth, imgHeight);
+                yPosition += imgHeight + 10;
+
+            } catch (e) {
+                console.error("Gagal merender laporan ke kanvas:", e);
+                showNotification(`Gagal memproses laporan oleh ${report.reporter_name}.`, 'error');
+            }
+        }
+        
+        pdf.save(`Laporan-BOD-${new Date().toISOString().slice(0,10)}.pdf`);
+        pdfContent.innerHTML = '';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('report-date').valueAsDate = new Date();
+        loadAllMasterData();
+        applyFilters(); 
+        document.getElementById('reporter-name').addEventListener('change', function() { 
+            // Tidak ada lagi event listener untuk tandatangan
+        });
+    });
+
+</script>
+</body>
+</html>
+
