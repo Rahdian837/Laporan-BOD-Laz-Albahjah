@@ -35,6 +35,7 @@
             background-color: var(--light-gray);
             color: var(--text-dark);
             line-height: 1.6;
+            padding-bottom: 80px; /* Ruang untuk navigasi bawah */
         }
         .container { max-width: 800px; margin: 0 auto; padding: 15px; }
 
@@ -69,14 +70,14 @@
         .btn-danger { background: #c62828; color: white; }
 
         /* Notifikasi */
-        #notification { position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%); padding: 12px 25px; border-radius: 8px; color: white; z-index: 1000; transition: bottom 0.5s ease-in-out; }
-        #notification.show { bottom: 30px; }
+        #notification { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); padding: 12px 25px; border-radius: 8px; color: white; z-index: 1000; transition: all 0.5s ease-in-out; opacity: 0; visibility: hidden; }
+        #notification.show { bottom: 90px; opacity: 1; visibility: visible; }
         #notification.success { background-color: #2e7d32; }
         #notification.error { background-color: #c62828; }
         
         /* Fitur Pengelolaan Master */
-        .management-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; }
-        .management-section label { font-weight: 600; color: var(--text-dark); font-size: 1rem; }
+        .management-section { margin-bottom: 30px; }
+        .management-section label { font-weight: 600; color: var(--text-dark); font-size: 1.1rem; display: block; margin-bottom: 10px; }
         .item-list { margin-top: 10px; }
         .list-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background-color: #f9f9f9; border-radius: 6px; margin-bottom: 8px; }
         .list-item span { flex-grow: 1; }
@@ -92,7 +93,7 @@
         .modal-content h3 { margin-bottom: 20px; }
         .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
         
-        /* -- Fitur Laporan (CSS BARU) -- */
+        /* -- Fitur Laporan -- */
         .filter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
         @media (max-width: 600px) { .filter-grid { grid-template-columns: 1fr; } }
         #report-list-container { margin-top: 20px; }
@@ -109,14 +110,49 @@
         #report-detail-content p { margin-bottom: 8px; font-size: 0.95rem; }
         #report-detail-content strong { color: #333; }
         
-        /* PERBAIKAN: Sembunyikan elemen PDF dengan memindahkannya ke luar layar */
-        #pdf-export-content {
-            position: absolute;
-            left: -9999px;
-            top: auto;
-            width: auto;
-            height: auto;
-            overflow: hidden;
+        #pdf-export-content { position: absolute; left: -9999px; top: auto; width: auto; height: auto; overflow: hidden; }
+
+        /* -- STRUKTUR TAB BARU -- */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .tab-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-around;
+            background-color: #ffffff;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+        }
+        .tab-button {
+            flex: 1;
+            padding: 12px 5px;
+            background: none;
+            border: none;
+            border-top: 3px solid transparent;
+            cursor: pointer;
+            text-align: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-light);
+            transition: all 0.2s ease;
+        }
+        .tab-button svg {
+            width: 24px;
+            height: 24px;
+            margin: 0 auto 4px;
+            display: block;
+            fill: var(--text-light);
+            transition: all 0.2s ease;
+        }
+        .tab-button.active {
+            color: var(--primary-green);
+            border-top-color: var(--primary-green);
+        }
+        .tab-button.active svg {
+            fill: var(--primary-green);
         }
 
     </style>
@@ -124,70 +160,102 @@
 <body>
 
     <div class="container">
-        <h1>Laporan Harian BOD</h1>
-        <p class="description">
-            Sistem pelaporan digital untuk dokumentasi kegiatan harian BOD LAZ & Wakaf Albahjah.
-        </p>
 
-        <form id="report-form">
+        <!-- KONTEN TAB: INPUT LAPORAN -->
+        <div id="form-tab" class="tab-content active">
+            <h1>Input Laporan Harian</h1>
+            <p class="description">
+                Lengkapi semua isian di bawah ini untuk mendokumentasikan kegiatan harian Anda.
+            </p>
+            <form id="report-form">
+                <section class="card">
+                    <div class="card-header"><span>🗓️</span><h3>Informasi Umum</h3></div>
+                    <div class="form-group"><label for="report-date">Hari / Tanggal</label><input type="date" id="report-date" name="report-date" required></div>
+                    <div class="form-group"><label for="reporter-name">Nama Pelapor (BOD)</label><select id="reporter-name" name="reporter-name" required><option value="" disabled selected>Memuat...</option></select></div>
+                    <div class="form-group"><label for="division">Divisi</label><select id="division" name="division" required><option value="" disabled selected>Memuat...</option></select></div>
+                </section>
+                
+                <section class="card"><div class="card-header"><span>🏢</span><h3>I. Kegiatan Internal Organisasi</h3></div><div id="internal-activities-container"></div><button type="button" class="btn-secondary" onclick="addInternalActivity()">+ Tambah Kegiatan Internal</button></section>
+                <section class="card"><div class="card-header"><span>🤝</span><h3>II. Kegiatan Eksternal</h3></div><div id="external-activities-container"></div><button type="button" class="btn-secondary" onclick="addExternalActivity()">+ Tambah Kegiatan Eksternal</button></section>
+                <section class="card"><div class="card-header"><span>🌍</span><h3>III. Pelayanan Masyarakat</h3></div><div id="community-service-container"></div><button type="button" class="btn-secondary" onclick="addCommunityService()">+ Tambah Program</button></section>
+                <section class="card"><div class="card-header"><span>📝</span><h3>VII. Rencana Hari Berikutnya</h3></div><div class="form-group"><label for="next-day-plan">Agenda prioritas untuk esok hari</label><textarea id="next-day-plan" name="next-day-plan" placeholder="Tuliskan rencana kegiatan Anda..."></textarea></div></section>
+                <section class="card"><div class="card-header"><span>💡</span><h3>VIII. Kesimpulan & Catatan Khusus</h3></div><div class="form-group"><label for="conclusion">Ringkasan capaian dan perhatian penting hari ini</label><textarea id="conclusion" name="conclusion" placeholder="Tuliskan kesimpulan Anda..."></textarea></div></section>
+                
+                <button type="submit" id="submit-button" class="btn-primary">Kirim Laporan Harian</button>
+            </form>
+        </div>
+
+        <!-- KONTEN TAB: LIHAT LAPORAN -->
+        <div id="reports-tab" class="tab-content">
+             <h1>Daftar Laporan</h1>
+            <p class="description">
+                Cari, filter, dan ekspor laporan yang sudah dikirimkan.
+            </p>
             <section class="card">
-                <div class="card-header"><span>🗓️</span><h3>Informasi Umum</h3></div>
-                <div class="form-group"><label for="report-date">Hari / Tanggal</label><input type="date" id="report-date" name="report-date" required></div>
-                <div class="form-group"><label for="reporter-name">Nama Pelapor (BOD)</label><select id="reporter-name" name="reporter-name" required><option value="" disabled selected>Memuat...</option></select></div>
-                <div class="management-section"><label>Kelola BOD</label><div id="bod-list-container" class="item-list"></div><button type="button" class="btn-secondary" onclick="openModal('bod', 'add')">+ Tambah BOD Baru</button></div>
-                <div class="form-group" style="margin-top: 25px;"><label for="division">Divisi</label><select id="division" name="division" required><option value="" disabled selected>Memuat...</option></select></div>
-                <div class="management-section"><label>Kelola Divisi</label><div id="division-list-container" class="item-list"></div><button type="button" class="btn-secondary" onclick="openModal('division', 'add')">+ Tambah Divisi Baru</button></div>
+                <div class="card-header"><span>🔍</span><h3>Filter Laporan</h3></div>
+                <div class="filters">
+                    <div class="filter-grid">
+                        <div class="form-group"><label for="filter-start-date">Dari Tanggal</label><input type="date" id="filter-start-date"></div>
+                        <div class="form-group"><label for="filter-end-date">Sampai Tanggal</label><input type="date" id="filter-end-date"></div>
+                        <div class="form-group"><label for="filter-bod">Nama BOD</label><select id="filter-bod"><option value="">Semua</option></select></div>
+                        <div class="form-group"><label for="filter-division">Divisi</label><select id="filter-division"><option value="">Semua</option></select></div>
+                    </div>
+                    <div class="report-actions">
+                        <button type="button" class="btn-primary" onclick="applyFilters()" style="width: 70%;">Terapkan Filter</button>
+                        <button type="button" class="btn-secondary" onclick="exportToPDF()" style="width: 30%; margin-top: 0;">Ekspor PDF</button>
+                    </div>
+                </div>
+
+                <div id="report-list-container">
+                    <div id="loading-indicator">Memuat laporan...</div>
+                </div>
             </section>
-            
-            <section class="card"><div class="card-header"><span>🏢</span><h3>I. Kegiatan Internal Organisasi</h3></div><div id="internal-activities-container"></div><button type="button" class="btn-secondary" onclick="addInternalActivity()">+ Tambah Kegiatan Internal</button></section>
-            <section class="card"><div class="card-header"><span>🤝</span><h3>II. Kegiatan Eksternal</h3></div><div id="external-activities-container"></div><button type="button" class="btn-secondary" onclick="addExternalActivity()">+ Tambah Kegiatan Eksternal</button></section>
-            <section class="card"><div class="card-header"><span>🌍</span><h3>III. Pelayanan Masyarakat</h3></div><div id="community-service-container"></div><button type="button" class="btn-secondary" onclick="addCommunityService()">+ Tambah Program</button></section>
-            <section class="card"><div class="card-header"><span>📝</span><h3>VII. Rencana Hari Berikutnya</h3></div><div class="form-group"><label for="next-day-plan">Agenda prioritas untuk esok hari</label><textarea id="next-day-plan" name="next-day-plan" placeholder="Tuliskan rencana kegiatan Anda..."></textarea></div></section>
-            <section class="card"><div class="card-header"><span>💡</span><h3>VIII. Kesimpulan & Catatan Khusus</h3></div><div class="form-group"><label for="conclusion">Ringkasan capaian dan perhatian penting hari ini</label><textarea id="conclusion" name="conclusion" placeholder="Tuliskan kesimpulan Anda..."></textarea></div></section>
-            
-            <button type="submit" id="submit-button" class="btn-primary">Kirim Laporan Harian</button>
-        </form>
+        </div>
 
-        <section class="card" style="margin-top: 40px;">
-            <div class="card-header">
-                <span>📊</span>
-                <h3>Daftar Laporan</h3>
-            </div>
-            
-            <div class="filters">
-                <div class="filter-grid">
-                    <div class="form-group"><label for="filter-start-date">Dari Tanggal</label><input type="date" id="filter-start-date"></div>
-                    <div class="form-group"><label for="filter-end-date">Sampai Tanggal</label><input type="date" id="filter-end-date"></div>
-                    <div class="form-group"><label for="filter-bod">Nama BOD</label><select id="filter-bod"><option value="">Semua</option></select></div>
-                    <div class="form-group"><label for="filter-division">Divisi</label><select id="filter-division"><option value="">Semua</option></select></div>
+        <!-- KONTEN TAB: KELOLA DATA -->
+        <div id="manage-tab" class="tab-content">
+            <h1>Kelola Data Master</h1>
+            <p class="description">
+                Tambah, ubah, atau hapus data master untuk BOD dan Divisi.
+            </p>
+            <section class="card">
+                <div class="management-section">
+                    <label>Kelola BOD</label>
+                    <div id="bod-list-container" class="item-list"></div>
+                    <button type="button" class="btn-secondary" onclick="openModal('bod', 'add')">+ Tambah BOD Baru</button>
                 </div>
-                <div class="report-actions">
-                    <button type="button" class="btn-primary" onclick="applyFilters()" style="width: 70%;">Terapkan Filter</button>
-                    <button type="button" class="btn-secondary" onclick="exportToPDF()" style="width: 30%; margin-top: 0;">Ekspor PDF</button>
+                <div class="management-section" style="margin-top: 40px;">
+                    <label>Kelola Divisi</label>
+                    <div id="division-list-container" class="item-list"></div>
+                    <button type="button" class="btn-secondary" onclick="openModal('division', 'add')">+ Tambah Divisi Baru</button>
                 </div>
-            </div>
+            </section>
+        </div>
 
-            <div id="report-list-container">
-                <div id="loading-indicator">Memuat laporan...</div>
-            </div>
-        </section>
     </div>
 
+    <!-- Navigasi Tab di Bawah -->
+    <nav class="tab-nav">
+        <button id="nav-form-btn" class="tab-button active" onclick="switchTab('form-tab')">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/></svg>
+            Input Laporan
+        </button>
+        <button id="nav-reports-btn" class="tab-button" onclick="switchTab('reports-tab')">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+            Lihat Laporan
+        </button>
+        <button id="nav-manage-btn" class="tab-button" onclick="switchTab('manage-tab')">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+            Kelola Data
+        </button>
+    </nav>
+
+
+    <!-- Modals (Tidak berubah) -->
     <div id="edit-modal" class="modal-overlay"><div class="modal-content"><h3 id="modal-title"></h3><div class="form-group"><label for="modal-input">Nama</label><input type="text" id="modal-input" placeholder="Masukkan nama..."></div><div class="modal-actions"><button type="button" class="btn-secondary" onclick="closeModal()">Batal</button><button type="button" class="btn-primary" id="modal-save-button">Simpan</button></div></div></div>
     <div id="confirm-modal" class="modal-overlay"><div class="modal-content"><h3>Konfirmasi Hapus</h3><p id="confirm-text">Apakah Anda yakin ingin menghapus item ini?</p><div class="modal-actions"><button type="button" class="btn-secondary" id="confirm-cancel">Batal</button><button type="button" class="btn-danger" id="confirm-delete">Hapus</button></div></div></div>
-    
-    <div id="report-detail-modal" class="modal-overlay">
-        <div class="modal-content">
-            <h3>Detail Laporan</h3>
-            <div id="report-detail-content"></div>
-            <div class="modal-actions">
-                <button type="button" class="btn-secondary" onclick="closeReportDetailModal()">Tutup</button>
-            </div>
-        </div>
-    </div>
-    
+    <div id="report-detail-modal" class="modal-overlay"><div class="modal-content"><h3>Detail Laporan</h3><div id="report-detail-content"></div><div class="modal-actions"><button type="button" class="btn-secondary" onclick="closeReportDetailModal()">Tutup</button></div></div></div>
     <div id="pdf-export-content"></div>
-
     <div id="notification"></div>
 
 <script>
@@ -196,12 +264,24 @@
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtxcmloc3ZpbWJpdm1xdnJxaHJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDU0MjksImV4cCI6MjA3NjIyMTQyOX0.3s71tqjB0JQj6rDI-w03f-hNYTzbABqzSxB86QASnlo';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    // --- LOGIKA TAB BARU ---
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+
+        document.getElementById(tabId).classList.add('active');
+        const activeBtnId = `nav-${tabId.split('-')[0]}-btn`;
+        document.getElementById(activeBtnId).classList.add('active');
+        window.scrollTo(0, 0); // Gulir ke atas saat ganti tab
+    }
+
+
     let internalActivityCount = 0, externalActivityCount = 0, communityServiceCount = 0;
     function addInternalActivity(){internalActivityCount++;const c=document.getElementById("internal-activities-container"),d=document.createElement("div");d.className="dynamic-item",d.id=`internal-activity-${internalActivityCount}`,d.innerHTML=`<div class=dynamic-item-header><strong>Kegiatan Internal ${internalActivityCount}</strong><button type=button class=btn-delete-item onclick=removeItem('internal-activity-${internalActivityCount}')>Hapus</button></div><div class=form-group><label>Uraian Kegiatan</label><input type=text name=internal_uraian_${internalActivityCount} placeholder="Contoh: Rapat koordinasi mingguan"></div><div class=form-group><label>Waktu</label><input type=time name=internal_waktu_${internalActivityCount}></div><div class=form-group><label>Tempat</label><input type=text name=internal_tempat_${internalActivityCount} placeholder="Contoh: Ruang Meeting Lt. 2"></div><div class=form-group><label>Hasil/Pencapaian</label><textarea name=internal_hasil_${internalActivityCount} placeholder="Jelaskan hasil dari kegiatan..."></textarea></div>`,c.appendChild(d)}function addExternalActivity(){externalActivityCount++;const c=document.getElementById("external-activities-container"),d=document.createElement("div");d.className="dynamic-item",d.id=`external-activity-${externalActivityCount}`,d.innerHTML=`<div class=dynamic-item-header><strong>Kegiatan Eksternal ${externalActivityCount}</strong><button type=button class=btn-delete-item onclick=removeItem('external-activity-${externalActivityCount}')>Hapus</button></div><div class=form-group><label>Uraian Kegiatan</label><input type=text name=external_uraian_${externalActivityCount} placeholder="Contoh: Pertemuan dengan mitra A"></div><div class=form-group><label>Waktu</label><input type=time name=external_waktu_${externalActivityCount}></div><div class=form-group><label>Tempat</label><input type=text name=external_tempat_${externalActivityCount} placeholder="Contoh: Kantor Mitra A"></div><div class=form-group><label>Pihak Terkait</label><input type=text name=external_pihak_${externalActivityCount} placeholder="Contoh: Bpk. Fulan"></div><div class=form-group><label>Hasil/Pencapaian</label><textarea name=external_hasil_${externalActivityCount} placeholder="Jelaskan hasil dari kegiatan..."></textarea></div>`,c.appendChild(d)}function addCommunityService(){communityServiceCount++;const c=document.getElementById("community-service-container"),d=document.createElement("div");d.className="dynamic-item",d.id=`service-${communityServiceCount}`,d.innerHTML=`<div class=dynamic-item-header><strong>Program ${communityServiceCount}</strong><button type=button class=btn-delete-item onclick=removeItem('service-${communityServiceCount}')>Hapus</button></div><div class=form-group><label>Nama Program</label><input type=text name=service_program_${communityServiceCount} placeholder="Contoh: Distribusi Sembako"></div><div class=form-group><label>Lokasi</label><input type=text name=service_lokasi_${communityServiceCount} placeholder="Contoh: Desa Sukamaju"></div><div class=form-group><label>Target Penerima</label><input type=text name=service_target_${communityServiceCount} placeholder="Contoh: 50 KK dhuafa"></div><div class=form-group><label>Status Pelaksanaan</label><input type=text name=service_status_${communityServiceCount} placeholder="Contoh: Selesai"></div><div class=form-group><label>Kendala</label><textarea name=service_kendala_${communityServiceCount} placeholder="Jelaskan jika ada kendala..."></textarea></div>`,c.appendChild(d)}function removeItem(c){const d=document.getElementById(c);d&&d.remove()}
 
     function showNotification(message, type) { const notification = document.getElementById('notification'); notification.textContent = message; notification.className = type; notification.classList.add('show'); setTimeout(() => { notification.classList.remove('show'); }, 3000); }
     
-    const modal=document.getElementById("edit-modal"),modalTitle=document.getElementById("modal-title"),modalInput=document.getElementById("modal-input"),modalSaveBtn=document.getElementById("modal-save-button"),confirmModal=document.getElementById("confirm-modal");function openModal(a,b,c=null,d=""){const e="bod"===a,f=`${"add"===b?"Tambah":"Edit"} ${e?"BOD Baru":"Divisi Baru"}`;modalTitle.textContent=f,modalInput.value=d,modal.classList.add("show"),modalInput.focus(),modalSaveBtn.onclick=()=>{const f=modalInput.value.trim();f?(e?"add"===b?addData("bod_members",f):updateData("bod_members",c,f):"add"===b?addData("divisions",f):updateData("divisions",c,f)):showNotification("Nama tidak boleh kosong.","error")}}function closeModal(){modal.classList.remove("show")}async function addData(a,b){const{error:c}=await supabaseClient.from(a).insert([{name:b}]);handleCrudResponse(c,"ditambahkan")}async function updateData(a,b,c){const{error:d}=await supabaseClient.from(a).update({name:c}).eq("id",b);handleCrudResponse(d,"diperbarui")}function confirmDelete(a,b){const c="bod"===a;confirmModal.classList.add("show"),document.getElementById("confirm-cancel").onclick=()=>confirmModal.classList.remove("show"),document.getElementById("confirm-delete").onclick=async()=>{const d=c?"bod_members":"divisions",{error:e}=await supabaseClient.from(d).delete().eq("id",b);handleCrudResponse(e,"dihapus"),confirmModal.classList.remove("show")}}function handleCrudResponse(a,b){a?showNotification(`Gagal ${b}: ${a.message}`,"error"):(showNotification(`Data berhasil ${b}!`,"success"),loadAllMasterData(),closeModal())}async function loadAndDisplayData(a){const b="bod"===a,c=b?"bod_members":"divisions",d=document.getElementById(b?"bod-list-container":"division-list-container"),e=document.getElementById(b?"reporter-name":"division"),f=document.getElementById(b?"filter-bod":"filter-division");const{data:g,error:h}=await supabaseClient.from(c).select("id, name").order("name");if(d.innerHTML="",e.innerHTML=`<option value="" disabled selected>Pilih ${b?"Nama BOD":"Divisi"}</option>`,f.innerHTML='<option value="">Semua</option>',h)return void console.error(`Error loading ${a}:`,h);g.forEach(a=>{const c=document.createElement("div");c.className="list-item",c.innerHTML=`<span>${a.name}</span> <div class="list-item-actions"><button type="button" class="btn-edit" onclick="openModal('${b?"bod":"division"}', 'edit', '${a.id}', '${a.name}')">Edit</button <button type="button" class="btn-delete" onclick="confirmDelete('${b?"bod":"division"}', '${a.id}')">Hapus</button></div>`,d.appendChild(c);const g=document.createElement("option");g.value=a.name,g.textContent=a.name,e.appendChild(g);const h=document.createElement("option");h.value=a.name,h.textContent=a.name,f.appendChild(h)})}function loadAllMasterData(){loadAndDisplayData("bod"),loadAndDisplayData("division")}
+    const modal=document.getElementById("edit-modal"),modalTitle=document.getElementById("modal-title"),modalInput=document.getElementById("modal-input"),modalSaveBtn=document.getElementById("modal-save-button"),confirmModal=document.getElementById("confirm-modal");function openModal(a,b,c=null,d=""){const e="bod"===a,f=`${"add"===b?"Tambah":"Edit"} ${e?"BOD Baru":"Divisi Baru"}`;modalTitle.textContent=f,modalInput.value=d,modal.classList.add("show"),modalInput.focus(),modalSaveBtn.onclick=()=>{const f=modalInput.value.trim();f?(e?"add"===b?addData("bod_members",f):updateData("bod_members",c,f):"add"===b?addData("divisions",f):updateData("divisions",c,f)):showNotification("Nama tidak boleh kosong.","error")}}function closeModal(){modal.classList.remove("show")}async function addData(a,b){const{error:c}=await supabaseClient.from(a).insert([{name:b}]);handleCrudResponse(c,"ditambahkan")}async function updateData(a,b,c){const{error:d}=await supabaseClient.from(a).update({name:c}).eq("id",b);handleCrudResponse(d,"diperbarui")}function confirmDelete(a,b){const c="bod"===a;confirmModal.classList.add("show"),document.getElementById("confirm-cancel").onclick=()=>confirmModal.classList.remove("show"),document.getElementById("confirm-delete").onclick=async()=>{const d=c?"bod_members":"divisions",{error:e}=await supabaseClient.from(d).delete().eq("id",b);handleCrudResponse(e,"dihapus"),confirmModal.classList.remove("show")}}function handleCrudResponse(a,b){a?showNotification(`Gagal ${b}: ${a.message}`,"error"):(showNotification(`Data berhasil ${b}!`,"success"),loadAllMasterData(),closeModal())}async function loadAndDisplayData(a){const b="bod"===a,c=b?"bod_members":"divisions",d=document.getElementById(b?"bod-list-container":"division-list-container"),e=document.getElementById(b?"reporter-name":"division"),f=document.getElementById(b?"filter-bod":"filter-division");const{data:g,error:h}=await supabaseClient.from(c).select("id, name").order("name");if(d.innerHTML="",e.innerHTML=`<option value="" disabled selected>Pilih ${b?"Nama BOD":"Divisi"}</option>`,f.innerHTML='<option value="">Semua</option>',h)return void console.error(`Error loading ${a}:`,h);g.forEach(a=>{const c=document.createElement("div");c.className="list-item",c.innerHTML=`<span>${a.name}</span> <div class="list-item-actions"><button type="button" class="btn-edit" onclick="openModal('${b?"bod":"division"}', 'edit', '${a.id}', '${a.name}')">Edit</button <button type="button" class="btn-delete" onclick="confirmDelete('${b?"bod":"division"}', '${a.id}')">Hapus</button></div>`,d.appendChild(c);const g=document.createElement("option");g.value=a.name,g.textContent=a.name,e.appendChild(g);const i=document.createElement("option");i.value=a.name,i.textContent=a.name,f.appendChild(i)})}function loadAllMasterData(){loadAndDisplayData("bod"),loadAndDisplayData("division")}
 
     const reportForm = document.getElementById('report-form');
     reportForm.addEventListener('submit', async function(event) {
@@ -274,6 +354,7 @@
             document.getElementById('report-date').valueAsDate = new Date();
             addInternalActivity();
             applyFilters();
+            switchTab('reports-tab'); // Langsung pindah ke tab laporan setelah submit
         }
         submitButton.disabled = false; submitButton.textContent = 'Kirim Laporan Harian';
     });
@@ -480,9 +561,7 @@
         document.getElementById('report-date').valueAsDate = new Date();
         loadAllMasterData();
         applyFilters(); 
-        document.getElementById('reporter-name').addEventListener('change', function() { 
-            // Tidak ada lagi event listener untuk tandatangan
-        });
+        addInternalActivity();
     });
 
 </script>
